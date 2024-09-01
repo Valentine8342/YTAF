@@ -269,7 +269,7 @@
 
           if (randomVideoItem) {
             const videoLink = randomVideoItem.querySelector('a#video-title-link');
-            const thumbnailImg = randomVideoItem.querySelector('img#img');
+            const videoId = videoLink.href.split('v=')[1];
 
             const newElement = document.createElement('div');
             newElement.className = 'ytd-rich-item-renderer';
@@ -299,18 +299,14 @@
               overflow: hidden;
             `;
 
-            if (thumbnailImg && thumbnailImg.src) {
-              const img = document.createElement('img');
-              img.src = thumbnailImg.src;
-              img.style.cssText = `
-                width: 100%;
-                height: 100%;
-                object-fit: cover;
-              `;
-              thumbnail.appendChild(img);
-            } else {
-              thumbnail.style.background = 'linear-gradient(45deg, #4a90e2, #63b8ff)';
-            }
+            const img = document.createElement('img');
+            img.src = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+            img.style.cssText = `
+              width: 100%;
+              height: 100%;
+              object-fit: cover;
+            `;
+            thumbnail.appendChild(img);
 
             const title = document.createElement('a');
             title.href = videoLink.href;
