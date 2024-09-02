@@ -285,22 +285,17 @@
                 channelIconUrl = 'https://www.youtube.com/s/desktop/12d6b690/img/favicon_144x144.png';
               }
 
-              // console.log('Random video item structure:', randomVideoItem.outerHTML);
-
               const newElement = document.createElement('div');
-              newElement.className = 'ytd-rich-item-renderer';
-
-              // Check if the adVideo is the first video in the row
-              const parent = adVideo.parentElement;
-              const indexInParent = Array.from(parent.children).indexOf(adVideo);
-              const isFirstInRow = indexInParent % 3 === 0;
-              console.log(`Video ${index + 1} is ${isFirstInRow ? 'the first' : 'not the first'} in the row`);
+              newElement.className = 'ytd-rich-item-renderer injected-video';
 
               newElement.style.cssText = `
                 display: flex;
                 flex-direction: column;
-                ${isFirstInRow ? 'margin-left: 30px;' : ''}
-                width: 30%;
+                width: 100%;
+                max-width: 360px;
+                margin: 0 auto 16px;
+                padding: 0 8px;
+                box-sizing: border-box;
               `;
 
               const thumbnailContainer = document.createElement('div');
@@ -335,23 +330,29 @@
               const titleContainer = document.createElement('div');
               titleContainer.style.cssText = `
                 display: flex;
-                align-items: center;
+                align-items: flex-start;
                 margin-bottom: 8px;
               `;
 
               const channelIconElement = document.createElement('img');
               channelIconElement.src = channelIconUrl;
               channelIconElement.style.cssText = `
-                width: 24px;
-                height: 24px;
+                width: 36px;
+                height: 36px;
                 border-radius: 50%;
-                margin-right: 8px;
+                margin-right: 12px;
                 object-fit: cover;
               `;
               channelIconElement.onerror = function() {
                 console.log('Error loading channel icon, using fallback');
                 this.src = 'https://www.youtube.com/s/desktop/12d6b690/img/favicon_144x144.png';
               };
+
+              const titleAndMetadataContainer = document.createElement('div');
+              titleAndMetadataContainer.style.cssText = `
+                flex: 1;
+                min-width: 0;
+              `;
 
               const title = document.createElement('a');
               title.href = videoLink.href;
@@ -372,41 +373,43 @@
                 text-overflow: ellipsis;
                 white-space: normal;
                 text-decoration: none;
+                margin-bottom: 4px;
               `;
-
-              titleContainer.appendChild(channelIconElement);
-              titleContainer.appendChild(title);
 
               const author = document.createElement('div');
               author.textContent = randomVideoItem.querySelector('#text.ytd-channel-name')?.textContent || 'Channel Name';
               author.style.cssText = `
                 color: var(--yt-spec-text-secondary);
-                font-family: 'YouTube Sans', Arial, sans-serif;
-                font-size: 14px;
+                font-family: 'Roboto', Arial, sans-serif;
+                font-size: 1.2rem;
+                line-height: 1.8rem;
+                margin-bottom: 2px;
               `;
 
               const metadata = document.createElement('div');
               metadata.style.cssText = `
                 color: var(--yt-spec-text-secondary);
-                font-family: 'YouTube Sans', Arial, sans-serif;
-                font-size: 12px;
-                display: flex;
-                justify-content: space-between;
+                font-family: 'Roboto', Arial, sans-serif;
+                font-size: 1.2rem;
+                line-height: 1.8rem;
               `;
               metadata.innerHTML = `
-                <span>${views}</span>
-                <span>${uploadDate}</span>
+                ${views} • ${uploadDate}
               `;
+
+              titleAndMetadataContainer.appendChild(title);
+              titleAndMetadataContainer.appendChild(author);
+              titleAndMetadataContainer.appendChild(metadata);
+
+              titleContainer.appendChild(channelIconElement);
+              titleContainer.appendChild(titleAndMetadataContainer);
 
               thumbnailContainer.appendChild(thumbnail);
               newElement.appendChild(thumbnailContainer);
               newElement.appendChild(titleContainer);
-              newElement.appendChild(author);
-              newElement.appendChild(metadata);
 
               adVideo.replaceWith(newElement);
               console.log(`Replaced ad video ${index + 1} with link to: ${videoLink.href}`);
-              // console.log(`New element structure:`, newElement.outerHTML);
             } else {
               console.log(`No valid video link found for ad video ${index + 1}`);
             }
@@ -414,6 +417,27 @@
             console.log(`No regular video item found for ad video ${index + 1}`);
           }
         });
+
+        // Add responsive styles
+        const style = document.createElement('style');
+        style.textContent = `
+          @media (min-width: 576px) {
+            .injected-video {
+              width: 50%;
+            }
+          }
+          @media (min-width: 992px) {
+            .injected-video {
+              width: 33.333%;
+            }
+          }
+          @media (min-width: 1200px) {
+            .injected-video {
+              width: 25%;
+            }
+          }
+        `;
+        document.head.appendChild(style);
       }
     }
 
