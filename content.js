@@ -285,7 +285,7 @@
                 channelIconUrl = 'https://www.youtube.com/s/desktop/12d6b690/img/favicon_144x144.png';
               }
 
-              console.log('Random video item structure:', randomVideoItem.outerHTML);
+              // console.log('Random video item structure:', randomVideoItem.outerHTML);
 
               const newElement = document.createElement('div');
               newElement.className = 'ytd-rich-item-renderer';
@@ -294,6 +294,7 @@
               const parent = adVideo.parentElement;
               const indexInParent = Array.from(parent.children).indexOf(adVideo);
               const isFirstInRow = indexInParent % 3 === 0;
+              console.log(`Video ${index + 1} is ${isFirstInRow ? 'the first' : 'not the first'} in the row`);
 
               newElement.style.cssText = `
                 display: flex;
@@ -405,7 +406,7 @@
 
               adVideo.replaceWith(newElement);
               console.log(`Replaced ad video ${index + 1} with link to: ${videoLink.href}`);
-              console.log(`New element structure:`, newElement.outerHTML);
+              // console.log(`New element structure:`, newElement.outerHTML);
             } else {
               console.log(`No valid video link found for ad video ${index + 1}`);
             }
@@ -459,31 +460,39 @@
      * @param {NodeList} videos List of video elements
      * @return {undefined}
      */
-    function applyMarginToFirstInRow(videos) {
-      videos.forEach((video, index) => {
-        if (index % 3 === 0) {
-          video.style.marginLeft = '30px';
+    function applyMarginToInjectedVideos(videos) {
+      console.log('Applying margin to injected videos after the first two');
+      let injectedCount = 0;
+      videos.forEach((video) => {
+        if (isInjectedVideo(video)) {
+          injectedCount++;
+          if (injectedCount > 2) {
+            console.log(`Injected video ${injectedCount} gets margin`);
+            video.style.marginLeft = '30px';
+          } else {
+            video.style.marginLeft = '0';
+          }
         } else {
           video.style.marginLeft = '0';
         }
       });
     }
 
-    /**
-     * Setup observer for video grid to apply margin to new videos
-     * @return {undefined}
-     */
+    function isInjectedVideo(video) {
+      return video.querySelector('a#video-title') !== null;
+    }
+
     function setupVideoGridObserver() {
       const observer = new MutationObserver((mutations) => {
         for (let mutation of mutations) {
           if (mutation.type === 'childList') {
-            const newVideos = mutation.addedNodes;
-            const videoItems = Array.from(newVideos).filter(node => 
+            const newVideos = Array.from(mutation.addedNodes).filter(node => 
               node.nodeType === Node.ELEMENT_NODE && 
               node.classList.contains('ytd-rich-item-renderer')
             );
-            if (videoItems.length > 0) {
-              applyMarginToFirstInRow(videoItems);
+            if (newVideos.length > 0) {
+              console.log('New videos added:', newVideos);
+              applyMarginToInjectedVideos(document.querySelectorAll('ytd-rich-item-renderer'));
             }
           }
         }
@@ -503,7 +512,8 @@
       removePlayerAD('removePlayerAD');
       setupAdVideoObserver();
       setupVideoGridObserver();
-      applyMarginToFirstInRow(document.querySelectorAll('ytd-rich-item-renderer'));
+      console.log('Applying initial margin to videos');
+      applyMarginToInjectedVideos(document.querySelectorAll('ytd-rich-item-renderer'));
     }
 
     if (document.readyState === 'loading') {
