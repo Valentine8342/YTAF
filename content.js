@@ -187,7 +187,7 @@
      * @return {undefined}
      */
     function playAfterAd() {
-      if (video.paused && video.currentTime < 1) {
+      if (video && video.paused && video.currentTime < 1) {
         video.play();
         log('Auto-playing video');
       }
@@ -229,14 +229,14 @@
       const skipButton = document.querySelector('.ytp-ad-skip-button') || document.querySelector('.ytp-skip-ad-button') || document.querySelector('.ytp-ad-skip-button-modern');
       const shortAdMsg = document.querySelector('.video-ads.ytp-ad-module .ytp-ad-player-overlay') || document.querySelector('.ytp-ad-button-icon');
 
-      if ((skipButton || shortAdMsg) && window.location.href.indexOf('https://m.youtube.com/') === -1) { // Mobile mute bug
+      if ((skipButton || shortAdMsg) && window.location.href.indexOf('https://m.youtube.com/') === -1 && video) { // Mobile mute bug
         video.muted = true;
       }
 
       if (skipButton) {
         const delayTime = 0.5;
         setTimeout(skipAd, delayTime * 1000); // If click and call do not skip, directly change ad time
-        if (video.currentTime > delayTime) {
+        if (video && video.currentTime > delayTime) {
           video.currentTime = video.duration; // Force
           log('Special account skipped button ad');
           return;
@@ -244,7 +244,7 @@
         skipButton.click(); // PC
         nativeTouch.call(skipButton); // Phone
         log('Button skipped ad');
-      } else if (shortAdMsg) {
+      } else if (shortAdMsg && video) {
         video.currentTime = video.duration; // Force
         log('Forced end of ad');
       }
@@ -269,73 +269,160 @@
 
           if (randomVideoItem) {
             const videoLink = randomVideoItem.querySelector('a#video-title-link');
-            const videoId = videoLink.href.split('v=')[1];
+            if (videoLink && videoLink.href) {
+              const videoId = videoLink.href.split('v=')[1];
+              
+              // Extract views and upload date
+              const metadataLine = randomVideoItem.querySelector('#metadata-line');
+              console.log('Metadata line:', metadataLine);
 
-            const newElement = document.createElement('div');
-            newElement.className = 'ytd-rich-item-renderer';
-            newElement.style.cssText = `
-              display: flex;
-              flex-direction: column;
-              width: 30%;
-            `;
+              let views = 'N/A views';
+              let uploadDate = 'N/A';
 
-            const thumbnailContainer = document.createElement('div');
-            thumbnailContainer.style.cssText = `
-              position: relative;
-              width: 100%;
-              padding-top: 56.25%; /* 16:9 aspect ratio */
-              margin-bottom: 12px;
-            `;
+              if (metadataLine) {
+                const metadataItems = metadataLine.querySelectorAll('.inline-metadata-item');
+                console.log('Metadata items:', metadataItems);
 
-            const thumbnail = document.createElement('a');
-            thumbnail.href = videoLink.href;
-            thumbnail.style.cssText = `
-              position: absolute;
-              top: 0;
-              left: 0;
-              width: 100%;
-              height: 100%;
-              border-radius: 12px;
-              overflow: hidden;
-            `;
+                if (metadataItems.length >= 2) {
+                  views = metadataItems[0].textContent.trim();
+                  uploadDate = metadataItems[1].textContent.trim();
+                } else if (metadataItems.length === 1) {
+                  views = metadataItems[0].textContent.trim();
+                }
+              }
 
-            const img = document.createElement('img');
-            img.src = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
-            img.style.cssText = `
-              width: 100%;
-              height: 100%;
-              object-fit: cover;
-            `;
-            thumbnail.appendChild(img);
+              console.log(`Video ${index + 1} - Views: ${views}, Upload Date: ${uploadDate}`);
 
-            const title = document.createElement('a');
-            title.href = videoLink.href;
-            title.textContent = videoLink.getAttribute('title') || 'Video Title';
-            title.style.cssText = `
-              color: var(--yt-spec-text-primary);
-              font-family: 'YouTube Sans', Arial, sans-serif;
-              font-size: 16px;
-              font-weight: 500;
-              line-height: 1.25;
-              margin-bottom: 4px;
-              text-decoration: none;
-            `;
+              // Extract channel icon URL
+              const channelIcon = randomVideoItem.querySelector('#avatar-link img');
+              let channelIconUrl = '';
+              if (channelIcon && channelIcon.src) {
+                channelIconUrl = channelIcon.src;
+                console.log(`Channel icon URL found: ${channelIconUrl}`);
+              } else {
+                console.log('Channel icon not found, using fallback');
+                channelIconUrl = 'https://www.youtube.com/s/desktop/12d6b690/img/favicon_144x144.png'; // Fallback to YouTube logo
+              }
 
-            const author = document.createElement('div');
-            author.textContent = randomVideoItem.querySelector('#text.ytd-channel-name')?.textContent || 'Channel Name';
-            author.style.cssText = `
-              color: var(--yt-spec-text-secondary);
-              font-family: 'YouTube Sans', Arial, sans-serif;
-              font-size: 14px;
-            `;
+              // Log the structure of randomVideoItem for debugging
+              console.log('Random video item structure:', randomVideoItem.outerHTML);
 
-            thumbnailContainer.appendChild(thumbnail);
-            newElement.appendChild(thumbnailContainer);
-            newElement.appendChild(title);
-            newElement.appendChild(author);
+              const newElement = document.createElement('div');
+              newElement.className = 'ytd-rich-item-renderer';
+              newElement.style.cssText = `
+                display: flex;
+                flex-direction: column;
+                width: 30%;
+              `;
 
-            adVideo.replaceWith(newElement);
-            console.log(`Replaced ad video ${index + 1} with link to: ${videoLink.href}`);
+              const thumbnailContainer = document.createElement('div');
+              thumbnailContainer.style.cssText = `
+                position: relative;
+                width: 100%;
+                padding-top: 56.25%; /* 16:9 aspect ratio */
+                margin-bottom: 12px;
+              `;
+
+              const thumbnail = document.createElement('a');
+              thumbnail.href = videoLink.href;
+              thumbnail.style.cssText = `
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                border-radius: 12px;
+                overflow: hidden;
+              `;
+
+              const img = document.createElement('img');
+              img.src = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+              img.style.cssText = `
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+              `;
+              thumbnail.appendChild(img);
+
+              const titleContainer = document.createElement('div');
+              titleContainer.style.cssText = `
+                display: flex;
+                align-items: center;
+                margin-bottom: 8px;
+              `;
+
+              const channelIconElement = document.createElement('img');
+              channelIconElement.src = channelIconUrl;
+              channelIconElement.style.cssText = `
+                width: 24px;
+                height: 24px;
+                border-radius: 50%;
+                margin-right: 8px;
+                object-fit: cover;
+              `;
+              channelIconElement.onerror = function() {
+                console.log('Error loading channel icon, using fallback');
+                this.src = 'https://www.youtube.com/s/desktop/12d6b690/img/favicon_144x144.png'; // Fallback to YouTube logo
+              };
+
+              const title = document.createElement('a');
+              title.href = videoLink.href;
+              title.textContent = videoLink.getAttribute('title') || 'Video Title';
+              title.id = 'video-title';
+              title.className = 'ytd-rich-grid-media';
+              title.style.cssText = `
+                color: var(--yt-spec-text-primary);
+                font-family: "Roboto", Arial, sans-serif;
+                font-size: 1.4rem;
+                line-height: 2rem;
+                font-weight: 500;
+                overflow: hidden;
+                display: -webkit-box;
+                max-height: 4rem;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                text-overflow: ellipsis;
+                white-space: normal;
+                text-decoration: none;
+              `;
+
+              titleContainer.appendChild(channelIconElement);
+              titleContainer.appendChild(title);
+
+              const author = document.createElement('div');
+              author.textContent = randomVideoItem.querySelector('#text.ytd-channel-name')?.textContent || 'Channel Name';
+              author.style.cssText = `
+                color: var(--yt-spec-text-secondary);
+                font-family: 'YouTube Sans', Arial, sans-serif;
+                font-size: 14px;
+              `;
+
+              // Add views and upload date
+              const metadata = document.createElement('div');
+              metadata.style.cssText = `
+                color: var(--yt-spec-text-secondary);
+                font-family: 'YouTube Sans', Arial, sans-serif;
+                font-size: 12px;
+                display: flex;
+                justify-content: space-between;
+              `;
+              metadata.innerHTML = `
+                <span>${views}</span>
+                <span>${uploadDate}</span>
+              `;
+
+              thumbnailContainer.appendChild(thumbnail);
+              newElement.appendChild(thumbnailContainer);
+              newElement.appendChild(titleContainer);
+              newElement.appendChild(author);
+              newElement.appendChild(metadata);
+
+              adVideo.replaceWith(newElement);
+              console.log(`Replaced ad video ${index + 1} with link to: ${videoLink.href}`);
+              console.log(`New element structure:`, newElement.outerHTML);
+            } else {
+              console.log(`No valid video link found for ad video ${index + 1}`);
+            }
           } else {
             console.log(`No regular video item found for ad video ${index + 1}`);
           }
