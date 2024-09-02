@@ -1,39 +1,23 @@
-// ==UserScript==
-// @name         youtube-videorestore
-// @namespace    https://github.com/Valentine8342/YT-BLOCK
-// @version      6.20
-// @description  A script to remove YouTube ads, including static ads and video ads, without interfering with the network and ensuring safety.
-// @match        *://*.youtube.com/*
-// @exclude      *://accounts.youtube.com/*
-// @exclude      *://www.youtube.com/live_chat_replay*
-// @exclude      *://www.youtube.com/persist_identity*
-// @icon         https://www.google.com/s2/favicons?sz=64&domain=YouTube.com
-// @grant        none
-// @license MIT
-// @downloadURL  https://update.greasyfork.org/scripts/459541/YouTube%E5%8E%BB%E5%B9%BF%E5%91%8A.user.js
-// @updateURL    https://update.greasyfork.org/scripts/459541/YouTube%E5%8E%BB%E5%B9%BF%E5%91%8A.meta.js
-// ==/UserScript==
-
 (function() {
     'use strict';
 
     let video;
-    // Ad selectors
+    
     const cssSelectorArr = [
-      '#masthead-ad', // Top banner ad on homepage
-      'ytd-rich-item-renderer.style-scope.ytd-rich-grid-row #content:has(.ytd-display-ad-renderer)', // Video layout ad on homepage
-      '.video-ads.ytp-ad-module', // Bottom ad in player
-      'tp-yt-paper-dialog:has(yt-mealbar-promo-renderer)', // Membership promotion ad on player page
-      'ytd-engagement-panel-section-list-renderer[target-id="engagement-panel-ads"]', // Recommended ad on top right of player page
-      '#related #player-ads', // Promotional ad on right side of comments section on player page
-      '#related ytd-ad-slot-renderer', // Video layout ad on right side of comments section on player page
-      'ytd-ad-slot-renderer', // Ad on search page
-      'yt-mealbar-promo-renderer', // Membership recommendation ad on player page
-      'ytd-popup-container:has(a[href="/premium"])', // Membership interception ad
-      'ad-slot-renderer', // Third-party recommended ad on mobile player page
-      'ytm-companion-ad-renderer', // Skippable video ad link on mobile
+      '#masthead-ad', 
+      'ytd-rich-item-renderer.style-scope.ytd-rich-grid-row #content:has(.ytd-display-ad-renderer)', 
+      '.video-ads.ytp-ad-module', 
+      'tp-yt-paper-dialog:has(yt-mealbar-promo-renderer)', 
+      'ytd-engagement-panel-section-list-renderer[target-id="engagement-panel-ads"]', 
+      '#related #player-ads', 
+      '#related ytd-ad-slot-renderer', 
+      'ytd-ad-slot-renderer', 
+      'yt-mealbar-promo-renderer', 
+      'ytd-popup-container:has(a[href="/premium"])', 
+      'ad-slot-renderer', 
+      'ytm-companion-ad-renderer', 
     ];
-    window.dev = false; // Development use
+    window.dev = false; 
 
     /**
      * Format standard time
@@ -42,7 +26,7 @@
      * @return {String}
      */
     function moment(time) {
-      // Get year, month, day, hour, minute, second
+      
       let y = time.getFullYear();
       let m = (time.getMonth() + 1).toString().padStart(2, '0');
       let d = time.getDate().toString().padStart(2, '0');
@@ -73,7 +57,7 @@
     function setRunFlag(name) {
       let style = document.createElement('style');
       style.id = name;
-      (document.head || document.body).appendChild(style); // Append node to HTML
+      (document.head || document.body).appendChild(style); 
     }
 
     /**
@@ -105,16 +89,16 @@
      * @return {undefined}
      */
     function generateRemoveADHTMLElement(id) {
-      // If already set, exit
+      
       if (checkRunFlag(id)) {
         log('Ad removal node already generated');
         return false;
       }
 
-      // Set ad removal styles
-      let style = document.createElement('style'); // Create style element
-      (document.head || document.body).appendChild(style); // Append node to HTML
-      style.appendChild(document.createTextNode(generateRemoveADCssText(cssSelectorArr))); // Append style node to element node
+      
+      let style = document.createElement('style'); 
+      (document.head || document.body).appendChild(style); 
+      style.appendChild(document.createTextNode(generateRemoveADCssText(cssSelectorArr))); 
       log('Ad removal node generated successfully');
     }
 
@@ -125,9 +109,9 @@
      */
     function generateRemoveADCssText(cssSelectorArr) {
       cssSelectorArr.forEach((selector, index) => {
-        cssSelectorArr[index] = `${selector}{display:none!important}`; // Iterate and set styles
+        cssSelectorArr[index] = `${selector}{display:none!important}`; 
       });
-      return cssSelectorArr.join(' '); // Concatenate into string
+      return cssSelectorArr.join(' '); 
     }
 
     /**
@@ -135,7 +119,7 @@
      * @return {undefined}
      */
     function nativeTouch() {
-      // Create Touch object
+      
       let touch = new Touch({
         identifier: Date.now(),
         target: this,
@@ -147,7 +131,7 @@
         force: 1
       });
 
-      // Create TouchEvent object
+      
       let touchStartEvent = new TouchEvent('touchstart', {
         bubbles: true,
         cancelable: true,
@@ -157,10 +141,10 @@
         changedTouches: [touch]
       });
 
-      // Dispatch touchstart event to target element
+      
       this.dispatchEvent(touchStartEvent);
 
-      // Create TouchEvent object
+      
       let touchEndEvent = new TouchEvent('touchend', {
         bubbles: true,
         cancelable: true,
@@ -170,7 +154,7 @@
         changedTouches: [touch]
       });
 
-      // Dispatch touchend event to target element
+      
       this.dispatchEvent(touchEndEvent);
     }
 
@@ -198,7 +182,7 @@
      * @return {undefined}
      */
     function closeOverlay() {
-      // Remove YouTube ad interception popup
+      
       const premiumContainers = [...document.querySelectorAll('ytd-popup-container')];
       const matchingContainers = premiumContainers.filter(container => container.querySelector('a[href="/premium"]'));
 
@@ -207,16 +191,16 @@
         log('Removed YouTube interceptor');
       }
 
-      // Get all elements with specified tag
+      
       const backdrops = document.querySelectorAll('tp-yt-iron-overlay-backdrop');
-      // Find element with specific style
+      
       const targetBackdrop = Array.from(backdrops).find(
         (backdrop) => backdrop.style.zIndex === '2201'
       );
-      // If found, clear its class and remove open attribute
+      
       if (targetBackdrop) {
-        targetBackdrop.className = ''; // Clear all classes
-        targetBackdrop.removeAttribute('opened'); // Remove open attribute
+        targetBackdrop.className = ''; 
+        targetBackdrop.removeAttribute('opened'); 
         log('Closed overlay');
       }
     }
@@ -229,23 +213,23 @@
       const skipButton = document.querySelector('.ytp-ad-skip-button') || document.querySelector('.ytp-skip-ad-button') || document.querySelector('.ytp-ad-skip-button-modern');
       const shortAdMsg = document.querySelector('.video-ads.ytp-ad-module .ytp-ad-player-overlay') || document.querySelector('.ytp-ad-button-icon');
 
-      if ((skipButton || shortAdMsg) && window.location.href.indexOf('https://m.youtube.com/') === -1 && video) { // Mobile mute bug
+      if ((skipButton || shortAdMsg) && window.location.href.indexOf('https://m.youtube.com/') === -1 && video) {
         video.muted = true;
       }
 
       if (skipButton) {
         const delayTime = 0.5;
-        setTimeout(skipAd, delayTime * 1000); // If click and call do not skip, directly change ad time
+        setTimeout(skipAd, delayTime * 1000);
         if (video && video.currentTime > delayTime) {
-          video.currentTime = video.duration; // Force
+          video.currentTime = video.duration;
           log('Special account skipped button ad');
           return;
         }
-        skipButton.click(); // PC
-        nativeTouch.call(skipButton); // Phone
+        skipButton.click(); 
+        nativeTouch.call(skipButton); 
         log('Button skipped ad');
       } else if (shortAdMsg && video) {
-        video.currentTime = video.duration; // Force
+        video.currentTime = video.duration; 
         log('Forced end of ad');
       }
     }
@@ -272,7 +256,7 @@
             if (videoLink && videoLink.href) {
               const videoId = videoLink.href.split('v=')[1];
               
-              // Extract views and upload date
+              
               const metadataLine = randomVideoItem.querySelector('#metadata-line');
               console.log('Metadata line:', metadataLine);
 
@@ -293,7 +277,7 @@
 
               console.log(`Video ${index + 1} - Views: ${views}, Upload Date: ${uploadDate}`);
 
-              // Extract channel icon URL
+              
               const channelIcon = randomVideoItem.querySelector('#avatar-link img');
               let channelIconUrl = '';
               if (channelIcon && channelIcon.src) {
@@ -301,10 +285,9 @@
                 console.log(`Channel icon URL found: ${channelIconUrl}`);
               } else {
                 console.log('Channel icon not found, using fallback');
-                channelIconUrl = 'https://www.youtube.com/s/desktop/12d6b690/img/favicon_144x144.png'; // Fallback to YouTube logo
+                channelIconUrl = 'https://www.youtube.com/s/desktop/12d6b690/img/favicon_144x144.png';
               }
 
-              // Log the structure of randomVideoItem for debugging
               console.log('Random video item structure:', randomVideoItem.outerHTML);
 
               const newElement = document.createElement('div');
@@ -362,7 +345,7 @@
               `;
               channelIconElement.onerror = function() {
                 console.log('Error loading channel icon, using fallback');
-                this.src = 'https://www.youtube.com/s/desktop/12d6b690/img/favicon_144x144.png'; // Fallback to YouTube logo
+                this.src = 'https://www.youtube.com/s/desktop/12d6b690/img/favicon_144x144.png';
               };
 
               const title = document.createElement('a');
@@ -397,7 +380,7 @@
                 font-size: 14px;
               `;
 
-              // Add views and upload date
+              
               const metadata = document.createElement('div');
               metadata.style.cssText = `
                 color: var(--yt-spec-text-secondary);
@@ -435,17 +418,17 @@
      * @return {undefined}
      */
     function removePlayerAD(id) {
-      // If already running, exit
+      
       if (checkRunFlag(id)) {
         log('Ad removal function already running');
         return false;
       }
 
-      // Monitor and handle video ads
-      const targetNode = document.body; // Directly monitor body changes
-      const config = { childList: true, subtree: true }; // Monitor changes in target node and its subtree
-      const observer = new MutationObserver(() => { getVideoDom(); closeOverlay(); skipAd(); playAfterAd(); replaceAdVideos(); }); // Handle video ad related
-      observer.observe(targetNode, config); // Start observing ad nodes with above configuration
+      
+      const targetNode = document.body; 
+      const config = { childList: true, subtree: true }; 
+      const observer = new MutationObserver(() => { getVideoDom(); closeOverlay(); skipAd(); playAfterAd(); replaceAdVideos(); }); 
+      observer.observe(targetNode, config); 
       log('Ad removal function running successfully');
     }
 
@@ -472,16 +455,16 @@
      * Main function
      */
     function main() {
-      generateRemoveADHTMLElement('removeADHTMLElement'); // Remove ads in interface
-      removePlayerAD('removePlayerAD'); // Remove ads in player
+      generateRemoveADHTMLElement('removeADHTMLElement'); 
+      removePlayerAD('removePlayerAD'); 
       setupAdVideoObserver();
     }
 
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', main); // Loading not yet complete
+      document.addEventListener('DOMContentLoaded', main); 
       log('YouTube ad removal script about to be called:');
     } else {
-      main(); // DOMContentLoaded already triggered
+      main(); 
       log('YouTube ad removal script called quickly:');
     }
 
