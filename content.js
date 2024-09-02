@@ -255,8 +255,6 @@
             const videoLink = randomVideoItem.querySelector('a#video-title-link');
             if (videoLink && videoLink.href) {
               const videoId = videoLink.href.split('v=')[1];
-              
-              
               const metadataLine = randomVideoItem.querySelector('#metadata-line');
               console.log('Metadata line:', metadataLine);
 
@@ -277,7 +275,6 @@
 
               console.log(`Video ${index + 1} - Views: ${views}, Upload Date: ${uploadDate}`);
 
-              
               const channelIcon = randomVideoItem.querySelector('#avatar-link img');
               let channelIconUrl = '';
               if (channelIcon && channelIcon.src) {
@@ -292,9 +289,16 @@
 
               const newElement = document.createElement('div');
               newElement.className = 'ytd-rich-item-renderer';
+
+              // Check if the adVideo is the first video in the row
+              const parent = adVideo.parentElement;
+              const indexInParent = Array.from(parent.children).indexOf(adVideo);
+              const isFirstInRow = indexInParent % 3 === 0;
+
               newElement.style.cssText = `
                 display: flex;
                 flex-direction: column;
+                ${isFirstInRow ? 'margin-left: 30px;' : ''}
                 width: 30%;
               `;
 
@@ -380,7 +384,6 @@
                 font-size: 14px;
               `;
 
-              
               const metadata = document.createElement('div');
               metadata.style.cssText = `
                 color: var(--yt-spec-text-secondary);
@@ -452,12 +455,55 @@
     }
 
     /**
+     * Apply margin to the first video in each row
+     * @param {NodeList} videos List of video elements
+     * @return {undefined}
+     */
+    function applyMarginToFirstInRow(videos) {
+      videos.forEach((video, index) => {
+        if (index % 3 === 0) {
+          video.style.marginLeft = '30px';
+        } else {
+          video.style.marginLeft = '0';
+        }
+      });
+    }
+
+    /**
+     * Setup observer for video grid to apply margin to new videos
+     * @return {undefined}
+     */
+    function setupVideoGridObserver() {
+      const observer = new MutationObserver((mutations) => {
+        for (let mutation of mutations) {
+          if (mutation.type === 'childList') {
+            const newVideos = mutation.addedNodes;
+            const videoItems = Array.from(newVideos).filter(node => 
+              node.nodeType === Node.ELEMENT_NODE && 
+              node.classList.contains('ytd-rich-item-renderer')
+            );
+            if (videoItems.length > 0) {
+              applyMarginToFirstInRow(videoItems);
+            }
+          }
+        }
+      });
+
+      const videoGrid = document.querySelector('ytd-rich-grid-renderer');
+      if (videoGrid) {
+        observer.observe(videoGrid, { childList: true, subtree: true });
+      }
+    }
+
+    /**
      * Main function
      */
     function main() {
-      generateRemoveADHTMLElement('removeADHTMLElement'); 
-      removePlayerAD('removePlayerAD'); 
+      generateRemoveADHTMLElement('removeADHTMLElement');
+      removePlayerAD('removePlayerAD');
       setupAdVideoObserver();
+      setupVideoGridObserver();
+      applyMarginToFirstInRow(document.querySelectorAll('ytd-rich-item-renderer'));
     }
 
     if (document.readyState === 'loading') {
