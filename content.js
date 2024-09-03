@@ -545,16 +545,13 @@
       window.document.body.appendChild(iframe);
       iframeAdded = true;
       
-      // Hide the original video player and its controls
-      videoPlayer.style.visibility = 'hidden';
+      // Disable the original video player
+      disableOriginalPlayer(video, videoPlayer);
       
-      // Hide the video controls
-      const videoControls = document.querySelector('.ytp-chrome-bottom');
-      if (videoControls) {
-        videoControls.style.display = 'none';
-      }
+      // Ensure the video remains muted
+      ensureVideoMuted(video);
       
-      log('Iframe added successfully, original player and controls hidden');
+      log('Iframe added successfully, original player disabled and muted');
     } else {
       log('ERROR: no videoId');
     }
@@ -575,46 +572,28 @@
     iframe.title = 'YouTube video player';
     iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
     iframe.allowFullscreen = true;
-    iframe.style.zIndex = '6';
+    iframe.style.zIndex = '9999';
     iframe.style.position = 'absolute';
     iframe.style.border = 'none';
 
-    const videoRect = video.getBoundingClientRect();
-    const videoPlayerRect = videoPlayer.getBoundingClientRect();
-
-    const videoAbsoluteTop = window.scrollY + videoRect.top;
-    const videoAbsoluteLeft = window.scrollX + videoRect.left;
-    const videoPlayerAbsoluteTop = window.scrollY + videoPlayerRect.top;
-    const videoPlayerAbsoluteLeft = window.scrollX + videoPlayerRect.left;
-
-    if (fromReload) {
-      iframe.style.top = `${videoAbsoluteTop - 1}px`;
-      iframe.style.left = `${videoAbsoluteLeft}px`;
-      iframe.style.height = `${video.offsetHeight + 2}px`;
-    } else {
-      iframe.style.top = `${videoPlayerAbsoluteTop - 1}px`;
-      iframe.style.left = `${videoPlayerAbsoluteLeft}px`;
-      iframe.style.height = `${videoPlayer.offsetHeight + 2}px`;
-    }
-
-    iframe.style.width = `${video.offsetWidth}px`;
-
     const updateIframeDimensions = () => {
-      const newLeft = window.scrollX + video.getBoundingClientRect().left;
+      const videoRect = video.getBoundingClientRect();
+      const videoPlayerRect = videoPlayer.getBoundingClientRect();
       
-      if (videoPlayer.offsetHeight === 0 && videoPlayer.offsetWidth === 0) {
-        iframe.style.height = `${video.offsetHeight + 2}px`;
-        iframe.style.width = `${video.offsetWidth}px`;
-      } else {
-        iframe.style.height = `${videoPlayer.offsetHeight + 2}px`;
-        iframe.style.width = `${videoPlayer.offsetWidth}px`;
-      }
-      iframe.style.left = `${newLeft}px`;
+      iframe.style.width = `${videoRect.width}px`;
+      iframe.style.height = `${videoRect.height}px`;
+      iframe.style.top = `${window.scrollY + videoRect.top}px`;
+      iframe.style.left = `${window.scrollX + videoRect.left}px`;
     };
 
-    window.addEventListener('resize', updateIframeDimensions);
-    new ResizeObserver(updateIframeDimensions).observe(videoPlayer);
+    const resizeObserver = new ResizeObserver(updateIframeDimensions);
+    resizeObserver.observe(video);
+    resizeObserver.observe(videoPlayer);
 
+    window.addEventListener('resize', updateIframeDimensions);
+    
+    updateIframeDimensions(); // Initial update
+    
     return iframe;
   }
 
@@ -650,23 +629,37 @@
    */
   function handleYouTubePageChange() {
     if (window.location.href.includes('youtube.com/watch')) {
-      video = document.querySelector('video');
-      const videoPlayer = document.getElementById('player');
-
-      if (video && videoPlayer) {
-        if (!iframeAdded) {
-          video.pause();
-          video.addEventListener('playing', pauseVideo, false);
-          createAndAddIframe(video, videoPlayer, false);
-        } else {
-          removeIframe();
-          createAndAddIframe(video, videoPlayer, false);
-        }
-      } else {
-        log('ERROR: Could not find video or video player');
-      }
+      injectVideo();
     } else {
       removeIframe();
+    }
+  }
+
+  /**
+   * Inject video
+   * @return {undefined}
+   */
+  function injectVideo() {
+    const originalVideo = document.querySelector('video');
+    const videoPlayer = document.getElementById('player');
+    
+    if (originalVideo && videoPlayer) {
+      function checkDimensions() {
+        if (originalVideo.videoWidth > 0 && originalVideo.videoHeight > 0) {
+          if (!iframeAdded) {
+            createAndAddIframe(originalVideo, videoPlayer, false);
+          } else {
+            removeIframe();
+            createAndAddIframe(originalVideo, videoPlayer, false);
+          }
+        } else {
+          requestAnimationFrame(checkDimensions);
+        }
+      }
+      
+      requestAnimationFrame(checkDimensions);
+    } else {
+      log('ERROR: Could not find video or video player');
     }
   }
 
@@ -677,6 +670,62 @@
    */
   function pauseVideo(event) {
     event.currentTarget.pause();
+  }
+
+  /**
+   * Disable the original video player
+   * @param {HTMLElement} video Video element
+   * @param {HTMLElement} videoPlayer Video player element
+   * @return {undefined}
+   */
+  function disableOriginalPlayer(video, videoPlayer) {
+    // Mute the video instead of removing the source
+    video.muted = true;
+    video.volume = 0;
+
+    // Disable controls
+    video.controls = false;
+
+    // Hide the video player container
+    videoPlayer.style.visibility = 'hidden';
+
+    // Remove any additional controls or overlays
+    const additionalControls = [
+      '.ytp-chrome-bottom',
+      '.ytp-chrome-top',
+      '.ytp-gradient-bottom',
+      '.ytp-gradient-top',
+      '.ytp-spinner'
+    ];
+
+    additionalControls.forEach(selector => {
+      const element = document.querySelector(selector);
+      if (element) {
+        element.style.display = 'none';
+      }
+    });
+
+    // Ensure the video remains muted
+    video.addEventListener('volumechange', () => {
+      video.muted = true;
+      video.volume = 0;
+    });
+  }
+
+  /**
+   * Ensure video remains muted
+   * @param {HTMLElement} video Video element
+   * @return {undefined}
+   */
+  function ensureVideoMuted(video) {
+    const observer = new MutationObserver(() => {
+      if (!video.muted || video.volume > 0) {
+        video.muted = true;
+        video.volume = 0;
+      }
+    });
+
+    observer.observe(video, { attributes: true, attributeFilter: ['muted', 'volume'] });
   }
 
   /**
