@@ -545,10 +545,16 @@
       window.document.body.appendChild(iframe);
       iframeAdded = true;
       
-      // Hide the original video player
+      // Hide the original video player and its controls
       videoPlayer.style.visibility = 'hidden';
       
-      log('Iframe added successfully and original player hidden');
+      // Hide the video controls
+      const videoControls = document.querySelector('.ytp-chrome-bottom');
+      if (videoControls) {
+        videoControls.style.display = 'none';
+      }
+      
+      log('Iframe added successfully, original player and controls hidden');
     } else {
       log('ERROR: no videoId');
     }
@@ -622,13 +628,19 @@
       iframe.parentNode.removeChild(iframe);
       iframeAdded = false;
       
-      // Show the original video player
+      // Show the original video player and its controls
       const videoPlayer = document.getElementById('player');
       if (videoPlayer) {
         videoPlayer.style.visibility = 'visible';
       }
       
-      log('Iframe removed and original player shown');
+      // Show the video controls
+      const videoControls = document.querySelector('.ytp-chrome-bottom');
+      if (videoControls) {
+        videoControls.style.display = '';
+      }
+      
+      log('Iframe removed, original player and controls shown');
     }
   }
 
