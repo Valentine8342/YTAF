@@ -2,6 +2,8 @@
     'use strict';
 
     let video;
+    let videoPlayer;
+    let iframeInjected = false;
     
     const cssSelectorArr = [
       '#masthead-ad', 
@@ -529,6 +531,83 @@
     }
 
     /**
+     * Inject iframe over the main video player
+     * @return {undefined}
+     */
+    function injectIframeOverVideo() {
+      video = document.querySelector('video');
+      videoPlayer = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
+
+      if (video && videoPlayer && !iframeInjected) {
+        const videoRect = videoPlayer.getBoundingClientRect();
+        const urlParams = new URLSearchParams(window.location.search);
+        const videoId = urlParams.get('v');
+
+        if (videoId) {
+          const iframe = document.createElement('iframe');
+          iframe.id = 'adBlockerIframe';
+          iframe.src = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0`;
+          iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+          iframe.allowFullscreen = true;
+          iframe.style.position = 'absolute';
+          iframe.style.top = `${videoRect.top}px`;
+          iframe.style.left = `${videoRect.left}px`;
+          iframe.style.width = `${videoRect.width}px`;
+          iframe.style.height = `${videoRect.height}px`;
+          iframe.style.border = 'none';
+          iframe.style.zIndex = '10000';
+
+          document.body.appendChild(iframe);
+          iframeInjected = true;
+
+          // Pause the original video
+          video.pause();
+
+          // Update iframe position and size on window resize
+          window.addEventListener('resize', updateIframePosition);
+
+          console.log('Iframe injected over video player');
+        }
+      }
+    }
+
+    /**
+     * Update iframe position and size
+     * @return {undefined}
+     */
+    function updateIframePosition() {
+      const iframe = document.getElementById('adBlockerIframe');
+      if (iframe && videoPlayer) {
+        const videoRect = videoPlayer.getBoundingClientRect();
+        iframe.style.top = `${videoRect.top}px`;
+        iframe.style.left = `${videoRect.left}px`;
+        iframe.style.width = `${videoRect.width}px`;
+        iframe.style.height = `${videoRect.height}px`;
+      }
+    }
+
+    /**
+     * Remove injected iframe
+     * @return {undefined}
+     */
+    function removeInjectedIframe() {
+      const iframe = document.getElementById('adBlockerIframe');
+      if (iframe) {
+        iframe.remove();
+        iframeInjected = false;
+        console.log('Injected iframe removed');
+      }
+    }
+
+    /**
+     * Check if current page is a YouTube video page
+     * @return {Boolean}
+     */
+    function isYouTubeVideoPage() {
+      return window.location.href.includes('youtube.com/watch');
+    }
+
+    /**
      * Main function
      */
     function main() {
@@ -538,7 +617,26 @@
       setupVideoGridObserver();
       console.log('Applying initial margin to videos');
       applyMarginToInjectedVideos(document.querySelectorAll('ytd-rich-item-renderer'));
+
+      // Add iframe injection for video pages
+      if (isYouTubeVideoPage()) {
+        injectIframeOverVideo();
+      }
     }
+
+    // Modify the existing code to handle URL changes
+    let lastUrl = location.href;
+    new MutationObserver(() => {
+      const url = location.href;
+      if (url !== lastUrl) {
+        lastUrl = url;
+        if (isYouTubeVideoPage()) {
+          injectIframeOverVideo();
+        } else {
+          removeInjectedIframe();
+        }
+      }
+    }).observe(document, { subtree: true, childList: true });
 
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', main); 
